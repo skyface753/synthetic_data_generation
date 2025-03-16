@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synthetic_data_gen"
+version = "0.1.3"
+description = "A package for generating synthetic data, using labelme and generating synthetic images."
+readme = "README.md"
+authors = [{ name = "Sebastian Jörz", email = "seppel8426@gmail.com" }]
+license = { file = "LICENSE" }
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools]
+packages = ["synthetic_data_gen"]
+
+
+[project.scripts]
+syn_data_gen-extract = "synthetic_data_gen.cli.extract_cli:main"
+syn_data_gen-generate = "synthetic_data_gen.cli.data_generation_cli:main"
+syn_data_gen-mix = "synthetic_data_gen.cli.dataset_mixer_cli:main"
+syn_data_gen-extract_to_yolo = "synthetic_data_gen.cli.extract_to_yolo_cli:main"
+syn_data_gen-extract_labelme_from_folder = "synthetic_data_gen.cli.extract_labelme_from_folder_cli:main"
+syn_data_gen-show_images_with_bboxes = "synthetic_data_gen.cli.show_images_with_bboxes_cli:main"

@@ -1,0 +1,9 @@
+kaggle
+torch
+torchvision
+ultralytics
+shapely
+scikit-image
+albumentations
+joblib
+labelme

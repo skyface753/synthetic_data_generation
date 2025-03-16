@@ -1,0 +1,17 @@
+import argparse
+from synthetic_data_gen.extract import extract_objects_from_labelme_data
+
+
+def main(args=None):
+    parser = argparse.ArgumentParser(
+        description='Extract objects from data labeled with LabelMe.')
+    parser.add_argument('--input_dir', type=str, required=True,
+                        help='Path to input images and labels.')
+    parser.add_argument('--output_dir', type=str, required=True,
+                        help='Path where output images will be saved.')
+    parser.add_argument('--margin', type=int, default=10,
+                        help='Margin (in pixels) to include around cropped objects.')
+    args = parser.parse_args()
+
+    extract_objects_from_labelme_data(
+        args.input_dir, args.output_dir, margin=args.margin)

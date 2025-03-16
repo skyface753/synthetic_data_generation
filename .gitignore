@@ -1,0 +1,4 @@
+.venv
+__pycache__
+synthetic_data_gen.egg-info
+.apikey
