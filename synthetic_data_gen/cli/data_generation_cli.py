@@ -101,3 +101,8 @@ def main(args=None):
                                              args.avoid_collisions, args.parallelize, args.yolo_input, args.yolo_output, args.color_harmonization, args.color_harmon_alpha,
                                              args.random_color_harmon_alpha, args.gaussian_options, args.debug, blending_methods, args.pyramid_blending_levels, args.distractor_objects)
     data_generator.generate_images()
+
+
+if __name__ == '__main__':
+    # run the main function
+    main()

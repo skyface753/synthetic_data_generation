@@ -15,3 +15,7 @@ def main(args=None):
 
     extract_objects_from_labelme_data(
         args.input_dir, args.output_dir, margin=args.margin)
+
+
+if __name__ == "__main__":
+    main()

@@ -12,3 +12,7 @@ def main(args=None):
     args = parser.parse_args()
 
     extract_labelme_from_folder(args.input_dir, args.output_dir)
+
+
+if __name__ == "__main__":
+    main()
