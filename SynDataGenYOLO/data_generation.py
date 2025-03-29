@@ -1,5 +1,6 @@
-from synthetic_data_gen.utils.modes import BlendingMode
-from synthetic_data_gen.utils.blending import poisson_blend_rgba, pyramid_blend
+from SynDataGenYOLO.utils.modes import BlendingMode, OutputMode
+from SynDataGenYOLO.utils.blending import poisson_blend_rgba, pyramid_blend
+from SynDataGenYOLO.utils.data_gen import validate_input_directory
 import json
 import warnings
 from pathlib import Path
@@ -16,15 +17,17 @@ from typing import List
 import cv2
 import PIL
 import logging
+import importlib.resources as pkg_resources
+import SynDataGenYOLO.data
 logger = logging.getLogger(__name__)
 
 
 class SyntheticImageGenerator:
     def __init__(self, input_dir: str, output_dir: str, image_number: int, max_objects_per_image: int,
                  image_width: int, image_height: int, fixed_image_sizes: bool, augmentation_path: str, scale_foreground_by_background_size: bool,
-                 scaling_factors: List[int], avoid_collisions: bool, parallelize: bool, yolo_input: bool, yolo_output: bool,
+                 scaling_factors: List[int], avoid_collisions: bool, parallelize: bool, yolo_input: bool, output_mode: OutputMode,
                  color_harmonization: bool, color_harmon_alpha: float, random_color_harmon_alpha: bool, gaussian_options: List[int], debug: bool,
-                 blending_methods: List[str], pyramid_blending_levels: int, distractor_objects: List[str]):
+                 blending_methods: List[str], pyramid_blending_levels: int, distractor_objects: List[str], overwrite_output: bool = False):
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.image_number = image_number
@@ -33,13 +36,14 @@ class SyntheticImageGenerator:
         self.image_height = image_height
         self.fixed_image_sizes = fixed_image_sizes
         self.zero_padding = 8
-        self.augmentation_path = Path(augmentation_path)
+        # umwandeln in Path kommt in _validate_augmentation_path
+        self.augmentation_path = augmentation_path
         self.scale_foreground_by_background_size = scale_foreground_by_background_size
         self.scaling_factors = scaling_factors
         self.avoid_collisions = avoid_collisions
         self.parallelize = parallelize
         self.yolo_input = yolo_input
-        self.yolo_output = yolo_output
+        self.output_mode = output_mode
         self.categories = []
         self.color_harmonization = color_harmonization
         self.color_harmon_alpha = color_harmon_alpha
@@ -50,129 +54,51 @@ class SyntheticImageGenerator:
 
         self.blending_methods = blending_methods
         self.pyramid_blending_levels = pyramid_blending_levels
-        self.distactor_objects = distractor_objects
+        self.distractor_objects = distractor_objects
+        self.overwrite_output = overwrite_output
 
-        self._validate_input_directory()
-        self._validate_output_directory()
+        if self.output_mode == OutputMode.CLASSIFICATION_SINGLE and self.yolo_input:
+            raise ValueError(
+                'Output mode CLASSIFICATION_SINGLE is not supported with YOLO input')
+        if self.output_mode == OutputMode.CLASSIFICATION_SINGLE and self.max_objects_per_image > 1:
+            raise ValueError(
+                'Output mode CLASSIFICATION_SINGLE is not supported with multiple objects per image')
+
+        self.foregrounds_dict, self.categories, self.background_images, self.labels_dict = validate_input_directory(
+            self.input_dir, self.yolo_input, self.distractor_objects)
+        # self._validate_output_directory()
+        self._make_output_dir()
         self._validate_augmentation_path()
 
-    def _validate_input_directory(self):
-        # Check if directory exists
-        assert self.input_dir.exists(
-        ), f'input_dir does not exist: {self.input_dir}'
+    # def _validate_output_directory(self):
+    #     # Check if directory is empty
+    #     assert len(list(self.output_dir.glob('*'))
+    #                ) == 0, f'output_dir is not empty: {self.output_dir}'
 
-        # Check if directory contains a foregrounds and backgrounds directory
-        for p in self.input_dir.glob('*'):
-            if p.name == 'foregrounds':
-                self.foregrounds_dir = p
-            elif p.name == 'backgrounds':
-                self.backgrounds_dir = p
-            elif p.name == 'labels':
-                if self.yolo_input:
-                    self.labels_dir = p
-
-        assert self.foregrounds_dir is not None, 'foregrounds sub-directory was not found in the input_dir'
-        assert self.backgrounds_dir is not None, 'backgrounds sub-directory was not found in the input_dir'
-        if self.yolo_input:
-            assert self.labels_dir is not None, 'labels sub-directory was not found in the input_dir'
-
-        self._validate_and_process_foregrounds()
-        self._validate_and_process_backgrounds()
-        self._validate_and_process_labels()
-
-    def _validate_and_process_foregrounds(self):
-        self.foregrounds_dict = dict()
-
-        for category in self.foregrounds_dir.glob('*'):
-            # check if we have a directory
-            if not category.is_dir():
-                warnings.warn(
-                    f'File found in foregrounds directory, ignoring: {category}')
-                continue
-            # check if the category is a distractor object
-            if category.name in self.distactor_objects:
-                warnings.warn(
-                    f'Distractor object found in foregrounds directory, ignoring: {category}')
-                warnings.warn(
-                    f'Distractor objects are not supported yet. Coming soon...')
-                continue
-
-            # Add images inside category folder to foregrounds dictionary
-            self.foregrounds_dict[category.name] = list(category.glob('*.png'))
-            self.categories.append(
-                {'name': category.name, 'id': len(self.categories)})
-
-        assert len(
-            self.foregrounds_dict) > 0, f'No valid foreground images were found in directory: {self.foregrounds_dir} '
-
-    def _validate_and_process_backgrounds(self):
-        self.background_images = []
-
-        for ext in ('*.png', '*.jpg', '*jpeg', '*.JPG'):
-            self.background_images.extend(self.backgrounds_dir.glob(ext))
-
-        assert len(
-            self.background_images) > 0, f'No valid background images were found in directory: {self.backgrounds_dir}'
-
-    def _validate_and_process_labels(self):  # YOLO in txt format
-        if self.yolo_input:
-            # Check for corresponding label files
-            self.labels_dict = dict()
-
-            for label in self.labels_dir.glob('*'):
-                if label.suffix == '.txt':
-                    self.labels_dict[label.stem] = label
-
-            assert len(
-                self.labels_dict) > 0, f'No valid label files were found in directory: {self.labels_dir}'
-
-            # Check if the number of labels match the number of background images
-            # assert len(self.background_images) == len(
-            #     self.labels_dict), f'Number of label files does not match the number of background images'
-
-            # when we have labels here, we need to update the categories from the foregrounds
-            # so we have all labels in the categories (startet with the background categories, and then added the labels from the foregrounds)
-            categories_from_labels = []
-            for label in self.labels_dict.values():
-                with open(label, 'r') as f:
-                    for line in f.readlines():
-                        category = line.split(' ')[0]
-                        if category not in categories_from_labels:
-                            categories_from_labels.append(category)
-            categories_from_labels.sort()
-            # self.categories [{'name': 'Tardigrade', 'id': 0}]
-            # categories_from_labels['0']
-            for category in categories_from_labels:
-                # check if the id is already in the categories
-                found = False
-                for cat in self.categories:
-                    if int(cat['id']) == int(category):
-                        found = True
-                        break
-                if not found:
-                    self.categories.append(
-                        {'name': category, 'id': len(self.categories
-                                                     )})
-            logger.debug(self.categories)
-
-    def _validate_output_directory(self):
-        # Check if directory is empty
-        assert len(list(self.output_dir.glob('*'))
-                   ) == 0, f'output_dir is not empty: {self.output_dir}'
-
-        # Create output directory
-        self.output_dir.mkdir(exist_ok=True)
+    #     # Create output directory
+    #     self.output_dir.mkdir(exist_ok=True)
 
     def _validate_augmentation_path(self):
         # Check if augmentation pipeline file exists
+        # check if False
+        print(
+            f'augmentation_path: {self.augmentation_path} is {type(self.augmentation_path)}')
+        if self.augmentation_path is False or self.augmentation_path == 'False' or self.augmentation_path == 'false':
+            self.augmentation_path = None
+            return
+        if self.augmentation_path is None or self.augmentation_path == '':
+            # Load default from package
+            with pkg_resources.path(SynDataGenYOLO.data, 'default_augmentation.yml') as default_augmentation_path:
+                self.augmentation_path = default_augmentation_path
+            print(f'using default augmentation path: {self.augmentation_path}')
+        self.augmentation_path = Path(self.augmentation_path)
         if self.augmentation_path.is_file() and self.augmentation_path.suffix == '.yml':
             self.transforms = A.load(
                 self.augmentation_path, data_format='yaml')
         else:
             self.transforms = None
-            warnings.warn(
+            raise FileNotFoundError(
                 f'{self.augmentation_path} is not a file. No augmentations will be applied')
-            quit()
 
     def _generate_image(self, image_number: int):
         # Randomly choose a background image
@@ -192,22 +118,26 @@ class SyntheticImageGenerator:
                 'image_path': foreground_path
             })
 
-        # Compose foregrounds and background
-        # composite, annotations = self._compose_images(
-        #     foregrounds, background_image_path)
-
+        # Generate the composed foregrounds and background
         fg_images, mask_images, composite, annotations, foreground_positions, fg_image_sizes, fg_images_sized, mask_images_sized = self._gen_compose_images(
             foregrounds, background_image_path)
 
-        # Paste foregrounds onto background
+        # Paste foregrounds onto background with the blending modes
         blending_mode_images = self._paste_foregrounds(
             fg_images, mask_images, composite, foreground_positions, fg_image_sizes, fg_images_sized, mask_images_sized)
 
         for blending_mode_image in blending_mode_images:
             save_filename = f'{image_number:0{self.zero_padding}}_{blending_mode_image["blending_mode"]}'
-            if not self.yolo_output:
+            if self.output_mode == OutputMode.CLASSIFICATION_SINGLE:
+                # get the class of the first foreground
+                class_name = foregrounds[0]['category']
+                save_filename = f'{class_name}/{save_filename}'
+
                 output_path = self.output_dir / f'{save_filename}.jpg'
-            else:
+                print(f'writing {output_path}')
+            elif self.output_mode == OutputMode.COCO:
+                output_path = self.output_dir / f'{save_filename}.jpg'
+            elif self.output_mode == OutputMode.YOLO:
                 output_path = self.output_dir / f'images/{save_filename}.jpg'
 
             blending_mode_image['image'] = blending_mode_image['image'].convert(
@@ -216,11 +146,12 @@ class SyntheticImageGenerator:
                 output_path, optimize=True, quality=70)
 
             annotations['imagePath'] = f'{save_filename}.jpg'
-            annotations_output_path = self.output_dir / f'{save_filename}.json'
-            if not self.yolo_output:
+            if self.output_mode == OutputMode.COCO:
+                annotations_output_path = self.output_dir / \
+                    f'{save_filename}.json'
                 with open(annotations_output_path, 'w+') as output_file:
                     json.dump(annotations, output_file)
-            if self.yolo_output:
+            elif self.output_mode == OutputMode.YOLO:
                 if self.yolo_input:
                     # get the corresponding label file
                     # check if the label file exists
@@ -270,35 +201,6 @@ class SyntheticImageGenerator:
                 with open(classes_output_path, 'w+') as output_file:
                     for category in self.categories:
                         output_file.write(f'{category["name"]}\n')
-            if self.debug and self.yolo_output:
-                # Show image with yolo labels
-                img = cv2.imread(str(output_path))
-                # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                # get the labels from the yolo
-                with open(label_output_path, 'r') as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        line = line.split(' ')
-                        category_id = int(line[0])
-                        x_center = float(line[1]) * annotations['imageWidth']
-                        y_center = float(line[2]) * annotations['imageHeight']
-                        width = float(line[3]) * annotations['imageWidth']
-                        height = float(line[4]) * annotations['imageHeight']
-                        x1 = int(x_center - width / 2)
-                        y1 = int(y_center - height / 2)
-                        x2 = int(x_center + width / 2)
-                        y2 = int(y_center + height / 2)
-                        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        cv2.putText(img, self.categories[category_id]['name'], (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
-                # draw the shapes
-
-                # show the image
-                cv2.imshow('image', img)
-                # when key q => disable debug mode
-                if cv2.waitKey(0) & 0xFF == ord('q'):
-                    self.debug = False
-                cv2.destroyAllWindows()
             # print(f'Generated image: {output_path}')
             logger.debug(f'Generated image: {output_path}')
         return
@@ -399,13 +301,16 @@ class SyntheticImageGenerator:
 
             # Perform transformations
             fg_image = self._transform_foreground(fg_image)
+            # TODO: random brightness and contrast
+            # fg_image = self._random_brightness_and_contrast(fg_image)
+
             logger.debug(fg_image.mode)
 
             # Choose a random x,y position
             max_x_position = composite.size[0] - fg_image.size[0]
             max_y_position = composite.size[1] - fg_image.size[1]
             assert max_x_position >= 0 and max_y_position >= 0, f"""foreground {fg["image_path"]} is too big({fg_image.size[0]}x{fg_image.size[1]}) for the requested output size({
-                    self.image_width}x{self.image_height}), check your input parameters"""
+                self.image_width}x{self.image_height}), check your input parameters"""
             foreground_position = (random.randint(
                 0, max_x_position), random.randint(0, max_y_position))
 
@@ -448,6 +353,9 @@ class SyntheticImageGenerator:
                 else:
                     paste_position = (int(fg_rect[0]), int(fg_rect[1]))
                     fg_list.append(fg_rect)
+
+            # random lighting conditions
+            # fg_image = self._lighting_condition_transform(fg_image)
 
             # color harmonization
             if self.color_harmonization:
@@ -559,8 +467,6 @@ class SyntheticImageGenerator:
 
         return blending_mode_images
 
-    # color harmonization
-
     def _color_harmonization(self, target, source, alpha):
         """
         Perform color transformation with an adjustable blending factor.
@@ -655,6 +561,25 @@ class SyntheticImageGenerator:
         else:
             return self._get_point_to_move_from(colliding_centroids)
 
+    def _random_brightness_and_contrast(self, fg_image):
+        """
+        Randomly change the brightness of the image
+        """
+        # only for visible pixels
+        alpha = fg_image.getchannel(3)
+        fg_image = fg_image.convert('RGB')
+        fg_image = A.RandomBrightnessContrast(
+            brightness_limit=0.1, contrast_limit=0.1, p=0.5)(image=np.array(fg_image))['image']
+        # random contrast
+        fg_image = A.RandomBrightnessContrast(
+            brightness_limit=0.1, contrast_limit=0.1, p=0.5)(image=np.array(fg_image))['image']
+
+        # convert back to RGBA
+        fg_image = Image.fromarray(fg_image)
+        # add alpha channel back
+        fg_image.putalpha(alpha)
+        return fg_image
+
     @staticmethod
     def _get_new_centroid_pos(pt_a, pt_b, step_size):
         """
@@ -712,11 +637,33 @@ class SyntheticImageGenerator:
             return Image.fromarray(self.transforms(image=np.array(fg_image))['image'])
         return fg_image
 
-    def generate_images(self):
-        # Create directories for images and labels
-        if self.yolo_output:
+    def _make_output_dir(self):
+        # check if the output directory contains any files
+        if len(list(self.output_dir.glob('*'))) > 0 and not self.overwrite_output:
+            raise Exception(
+                f'Output directory {self.output_dir} is not empty. Use --overwrite_output to overwrite it.')
+        # clear the output directory
+        if self.overwrite_output and self.output_dir.exists():
+            import shutil
+            shutil.rmtree(self.output_dir)
+        self.output_dir.mkdir(exist_ok=True)
+
+        if self.output_mode == OutputMode.CLASSIFICATION_SINGLE:
+            # Create directories for images and labels
+            self.output_dir.mkdir(exist_ok=True)
+            # Create directories for classes
+            for category in self.categories:
+                (self.output_dir / category['name']).mkdir(exist_ok=True)
+        elif self.output_mode == OutputMode.YOLO:
             (self.output_dir / 'images').mkdir(exist_ok=True)
             (self.output_dir / 'labels').mkdir(exist_ok=True)
+        elif self.output_mode == OutputMode.COCO:
+            self.output_dir.mkdir(exist_ok=True)
+
+    def generate_images(self):
+        # Create directories for images and labels
+        # self._make_output_dir()
+        # quit()
         if self.parallelize:
             Parallel(n_jobs=4)(delayed(self._generate_image)(
                 i) for i in tqdm(range(1, self.image_number + 1)))

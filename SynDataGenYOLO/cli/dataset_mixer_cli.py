@@ -1,5 +1,5 @@
 import argparse
-from synthetic_data_gen.dataset_mixer import mix_datasets
+from SynDataGenYOLO.dataset_mixer import mix_datasets
 
 
 def main(args=None):
@@ -20,7 +20,10 @@ def main(args=None):
     parser.add_argument('--class_names', type=str, nargs='+',
                         help='class names to be used in the data.yaml file')
 
-    args = parser.parse_args()
+    if args is None:
+        args = parser.parse_args()  # Parse args if called standalone
+    else:
+        args = parser.parse_args(args)  # Parse args when called from main CLI
 
     mix_datasets(args.input_dirs, args.test_dataset, args.percent_sets,
                  args.output_splits, args.output_dir, args.fixed_data_path, args.class_names)

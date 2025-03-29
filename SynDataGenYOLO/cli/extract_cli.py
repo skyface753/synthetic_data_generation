@@ -1,5 +1,5 @@
 import argparse
-from synthetic_data_gen.extract import extract_objects_from_labelme_data
+from SynDataGenYOLO.extract import extract_objects_from_labelme_data
 
 
 def main(args=None):
@@ -11,7 +11,10 @@ def main(args=None):
                         help='Path where output images will be saved.')
     parser.add_argument('--margin', type=int, default=10,
                         help='Margin (in pixels) to include around cropped objects.')
-    args = parser.parse_args()
+    if args is None:
+        args = parser.parse_args()  # Parse args if called standalone
+    else:
+        args = parser.parse_args(args)  # Parse args when called from main CLI
 
     extract_objects_from_labelme_data(
         args.input_dir, args.output_dir, margin=args.margin)

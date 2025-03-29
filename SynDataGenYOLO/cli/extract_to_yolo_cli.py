@@ -1,5 +1,5 @@
 import argparse
-from synthetic_data_gen.extract_to_yolo import extract_to_yolo
+from SynDataGenYOLO.extract_to_yolo import extract_to_yolo
 
 
 def main(args=None):
@@ -12,6 +12,9 @@ def main(args=None):
     parser.add_argument('--labels', type=str, nargs='+', required=True,
                         help='list of labels to extract')
 
-    args = parser.parse_args()
+    if args is None:
+        args = parser.parse_args()  # Parse args if called standalone
+    else:
+        args = parser.parse_args(args)  # Parse args when called from main CLI
 
     extract_to_yolo(args.input_dir, args.output_dir, args.labels)

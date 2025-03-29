@@ -1,7 +1,7 @@
 import warnings
 import os
 import argparse
-from synthetic_data_gen.data_generation import SyntheticImageGenerator, BlendingMode
+from SynDataGenYOLO.data_generation import SyntheticImageGenerator, BlendingMode, OutputMode
 import logging
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,12 @@ def main(args=None):
                         help='Path to the input directory. It must contain a backgrounds directory and a foregrounds directory')
     parser.add_argument('-out_dir', '--output_dir', type=str, required=True,
                         help='The directory where images and label files will be placed')
-    parser.add_argument('--augmentation_path', type=str, default='synthetic_data_gen/transform.yml',
+
+    # output mode: either YOLO or COCO or CLASSIFICATION_SINGLE
+    parser.add_argument('-o', '--output_mode', type=str, default='YOLO',
+                        help='Output mode: either YOLO or COCO or CLASSIFICATION_SINGLE (default=YOLO)')
+
+    parser.add_argument('--augmentation_path', type=str, default='',
                         help='Path to albumentations augmentation pipeline file')
     parser.add_argument('-img_number', '--image_number', type=int,
                         required=True, help='Number of images to create')
@@ -34,8 +39,8 @@ def main(args=None):
                         help='Whether or not to use multiple cores (default=false)')
     parser.add_argument('--yolo_input', default=False, action='store_true',
                         help='Has your background images been annotated in YOLO format?')
-    parser.add_argument('-yolo', '--yolo_output', default=False, action='store_true',
-                        help='Do you want to output the images in YOLO format?')
+    # parser.add_argument('-yolo', '--yolo_output', default=False, action='store_true',
+    #                     help='Do you want to output the images in YOLO format?')
     parser.add_argument('-c', '--color_harmonization', default=False, action='store_true',
                         help='Do you want to apply color harmonization?')
     parser.add_argument('-c_a', '--color_harmon_alpha', type=float, default=0.5,
@@ -52,8 +57,14 @@ def main(args=None):
                         help='Number of levels for the pyramid blending method')
     parser.add_argument('--distractor_objects', type=str, nargs='+', default=[],
                         help='List of foreground images, which should be used as distractor objects')
-    args = parser.parse_args()
+    parser.add_argument('--overwrite_output', default=False, action='store_true',
+                        help='Overwrite the output directory if it exists (default=false)')
+    if args is None:
+        args = parser.parse_args()  # Parse args if called standalone
+    else:
+        args = parser.parse_args(args)  # Parse args when called from main CLI
 
+    import sys
     blending_methods = []
     for blending_method in args.blending_methods:
         if blending_method == 'alpha':
@@ -68,8 +79,19 @@ def main(args=None):
             blending_methods.append(BlendingMode.PYRAMID_BLEND)
         else:
             print(f'Blending method {blending_method} not found')
-            import sys
             sys.exit(1)
+
+    # get the output mode
+    output_mode = None
+    if args.output_mode == OutputMode.YOLO.value:
+        output_mode = OutputMode.YOLO
+    elif args.output_mode == OutputMode.CLASSIFICATION_SINGLE.value:
+        output_mode = OutputMode.CLASSIFICATION_SINGLE
+    elif args.output_mode == OutputMode.COCO.value:
+        output_mode = OutputMode.COCO
+    else:
+        print(f'Output mode {args.output_mode} not found')
+        sys.exit(1)
 
     if args.fixed_image_sizes and args.yolo_input:
         warnings.warn(
@@ -90,16 +112,11 @@ def main(args=None):
     logging.info(
         f'Generating {args.image_number} images with {img_number} images per blending method')
 
-    # remove the output dir if it exists
-    if os.path.exists(args.output_dir):
-        import shutil
-        shutil.rmtree(args.output_dir)
-    else:
-        os.makedirs(args.output_dir)
     data_generator = SyntheticImageGenerator(args.input_dir, args.output_dir, img_number, args.max_objects_per_image, args.image_width,
                                              args.image_height, args.fixed_image_sizes, args.augmentation_path, args.scale_foreground_by_background_size, args.scaling_factors,
-                                             args.avoid_collisions, args.parallelize, args.yolo_input, args.yolo_output, args.color_harmonization, args.color_harmon_alpha,
-                                             args.random_color_harmon_alpha, args.gaussian_options, args.debug, blending_methods, args.pyramid_blending_levels, args.distractor_objects)
+                                             args.avoid_collisions, args.parallelize, args.yolo_input, output_mode, args.color_harmonization, args.color_harmon_alpha,
+                                             args.random_color_harmon_alpha, args.gaussian_options, args.debug, blending_methods, args.pyramid_blending_levels, args.distractor_objects,
+                                             args.overwrite_output)
     data_generator.generate_images()
 
 

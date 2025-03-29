@@ -78,6 +78,16 @@ def show_images_with_bboxes(input_path, pred_labels, write, output, amount, only
                         class_name = classess[class_id]
                         cv2.putText(img, class_name, (x1, y1 - 10),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                # put the number of objects in the top left corner
+                gt_text = "GT: " + str(len(gt_bboxes)) if gt_bboxes else ""
+                pred_text = "Pred: " + \
+                    str(len(pred_bboxes)) if pred_bboxes else ""
+                if gt_text != "":
+                    cv2.putText(img, gt_text, (10, 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                if pred_text != "":
+                    cv2.putText(img, pred_text, (10, 60),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
                 if write:
                     cv2.imwrite(os.path.join(output, image), img)

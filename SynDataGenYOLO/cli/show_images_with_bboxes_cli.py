@@ -1,6 +1,6 @@
 
 import argparse
-from synthetic_data_gen.show_images_with_bboxes import show_images_with_bboxes
+from SynDataGenYOLO.show_images_with_bboxes import show_images_with_bboxes
 
 
 def main(args=None):
@@ -25,7 +25,14 @@ def main(args=None):
     parser.add_argument('--classess', nargs='+', default=[],
                         help='Classes to show')
 
-    args = parser.parse_args()
+    if args is None:
+        args = parser.parse_args()  # Parse args if called standalone
+    else:
+        args = parser.parse_args(args)  # Parse args when called from main CLI
 
     show_images_with_bboxes(args.input, args.pred_labels, args.write,
                             args.output, args.amount, args.only_gt, args.only_pred, args.classess)
+
+
+if __name__ == "__main__":
+    main()

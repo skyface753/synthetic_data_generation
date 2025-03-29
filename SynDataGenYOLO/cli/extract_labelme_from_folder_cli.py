@@ -1,5 +1,5 @@
 import argparse
-from synthetic_data_gen.extract_labelme_from_folder import extract_labelme_from_folder
+from SynDataGenYOLO.extract_labelme_from_folder import extract_labelme_from_folder
 
 
 def main(args=None):
@@ -9,7 +9,10 @@ def main(args=None):
                         help='input directory containing labelme json files and images')
     parser.add_argument('--output_dir', type=str, required=True,
                         help='output directory to save the extracted json files with images')
-    args = parser.parse_args()
+    if args is None:
+        args = parser.parse_args()  # Parse args if called standalone
+    else:
+        args = parser.parse_args(args)  # Parse args when called from main CLI
 
     extract_labelme_from_folder(args.input_dir, args.output_dir)
 

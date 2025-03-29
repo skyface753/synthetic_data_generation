@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from PIL import Image
-from synthetic_data_gen.utils.modes import BlendingMode
+from SynDataGenYOLO.utils.modes import BlendingMode
 
 
 def poisson_blend_rgba(fg_image, bg_image, mask_image, center, blending_mode):
