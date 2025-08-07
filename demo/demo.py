@@ -8,13 +8,16 @@ from SynDataGenYOLO.data_generation import SyntheticImageGenerator, BlendingMode
 from pathlib import Path
 
 # --- Setup Directories and Predefined Images ---
-PREDEFINED_DIR = Path("demo_data")
-PREDEFINED_FOREGROUNDS_DIR = PREDEFINED_DIR / "foregrounds"
-PREDEFINED_BACKGROUNDS_DIR = PREDEFINED_DIR / "backgrounds"
+PREDEFINED_DIR = "demo_data"
+PREDEFINED_FOREGROUNDS_DIR = os.path.join(
+    os.path.dirname(__file__), PREDEFINED_DIR, "foregrounds")
+PREDEFINED_BACKGROUNDS_DIR = os.path.join(
+    os.path.dirname(__file__), PREDEFINED_DIR, "backgrounds")
 
 # Ensure directories exist
 for p in [PREDEFINED_FOREGROUNDS_DIR, PREDEFINED_BACKGROUNDS_DIR]:
-    p.mkdir(parents=True, exist_ok=True)
+    # p.mkdir(parents=True, exist_ok=True)
+    os.makedirs(p, exist_ok=True)
 
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.JPG')
 
@@ -41,11 +44,12 @@ def run_extraction(input_path, output_path, margin=20):
 
 
 def get_foreground_path(filename):
-    return str(PREDEFINED_FOREGROUNDS_DIR / filename)
+    # return str(PREDEFINED_FOREGROUNDS_DIR / filename)
+    return str(Path(PREDEFINED_FOREGROUNDS_DIR) / filename)
 
 
 def get_background_path(filename):
-    return str(PREDEFINED_BACKGROUNDS_DIR / filename)
+    return str(Path(PREDEFINED_BACKGROUNDS_DIR) / filename)
 
 
 # --- Streamlit App UI ---
@@ -133,11 +137,15 @@ if st.button("Generate Synthetic Image", use_container_width=True):
 
         st.info(
             f"Extracting object from {st.session_state.selected_foreground}...")
-        foreground_path = PREDEFINED_FOREGROUNDS_DIR / \
-            st.session_state.selected_foreground
+        # foreground_path = PREDEFINED_FOREGROUNDS_DIR / \
+        #     st.session_state.selected_foreground
+        foreground_path = os.path.join(PREDEFINED_FOREGROUNDS_DIR,
+                                       st.session_state.selected_foreground)
         # Assuming the labelme JSON file has the same name as the image (e.g., image.png, image.json)
         # and is in the same directory.
-        run_extraction(str(foreground_path.parent),
+        # run_extraction(str(foreground_path.parent),
+        #                temp_extracted_dir, margin=20)
+        run_extraction(str(PREDEFINED_FOREGROUNDS_DIR),
                        temp_extracted_dir, margin=20)
 
         st.info("Generating synthetic image...")
@@ -149,7 +157,7 @@ if st.button("Generate Synthetic Image", use_container_width=True):
         # Copy extracted objects and selected background into the input structure
         shutil.copytree(temp_extracted_dir, gen_input_dir / "foregrounds")
         os.makedirs(gen_input_dir / "backgrounds")
-        shutil.copy(PREDEFINED_BACKGROUNDS_DIR /
+        shutil.copy(Path(PREDEFINED_BACKGROUNDS_DIR) /
                     st.session_state.selected_background, gen_input_dir / "backgrounds")
 
         # Run the generator
