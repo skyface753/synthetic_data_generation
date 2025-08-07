@@ -1,0 +1,18 @@
+[project]
+name = "demo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pillow>=11.3.0",
+    "syndatagenyolo",
+]
+
+[dependency-groups]
+dev = [
+    "streamlit>=1.48.0",
+]
+
+[tool.uv.sources]
+syndatagenyolo = { workspace = true }
