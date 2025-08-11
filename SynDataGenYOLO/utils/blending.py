@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 from PIL import Image
-from SynDataGenYOLO.utils.modes import BlendingMode
+
+from syndatagenyolo.utils.modes import BlendingMode
 
 
 def poisson_blend_rgba(fg_image, bg_image, mask_image, center, blending_mode):
@@ -35,8 +36,15 @@ def poisson_blend_rgba(fg_image, bg_image, mask_image, center, blending_mode):
     bg_bgr = cv2.cvtColor(bg_rgb, cv2.COLOR_RGB2BGR)
 
     # Perform Poisson blending on the RGB channels
-    blended_bgr = cv2.seamlessClone(fg_bgr, bg_bgr, mask_array, center, cv2.NORMAL_CLONE if blending_mode ==
-                                    BlendingMode.POISSON_BLENDING_NORMAL else cv2.MIXED_CLONE)
+    blended_bgr = cv2.seamlessClone(
+        fg_bgr,
+        bg_bgr,
+        mask_array,
+        center,
+        cv2.NORMAL_CLONE
+        if blending_mode == BlendingMode.POISSON_BLENDING_NORMAL
+        else cv2.MIXED_CLONE,
+    )
     # Convert back to RGB
     blended_rgb = cv2.cvtColor(blended_bgr, cv2.COLOR_BGR2RGB)
 
@@ -116,11 +124,14 @@ def pyramid_blend(source, target, mask, num_levels=5):
     for i in range(1, num_levels):
         # Get the size of the current level
         size = (LS[i].shape[1], LS[i].shape[0])
-        ls_ = cv2.add(cv2.pyrUp(ls_, dstsize=size),
-                      np.float32(LS[i]))  # Add upsampled levels
+        ls_ = cv2.add(
+            cv2.pyrUp(ls_, dstsize=size), np.float32(LS[i])
+        )  # Add upsampled levels
 
         # Clip values to the range [0, 255] to avoid overflow when converting to uint8
         ls_ = cv2.normalize(ls_, None, 0, 255, cv2.NORM_MINMAX)
 
     # Convert the final blended image to uint8 for display or saving
-    return Image.fromarray(np.uint8(ls_), 'RGB')
+    return Image.fromarray(np.uint8(ls_), "RGB")
+    return Image.fromarray(np.uint8(ls_), "RGB")
+    return Image.fromarray(np.uint8(ls_), "RGB")

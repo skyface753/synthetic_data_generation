@@ -1,15 +1,19 @@
 import argparse
-import sys
-from SynDataGenYOLO.cli import (
-    data_generation_cli, dataset_mixer_cli, extract_cli,
-    extract_labelme_from_folder_cli, extract_to_yolo_cli, show_images_with_bboxes_cli
+
+from syndatagenyolo.cli import (
+    data_generation_cli,
+    dataset_mixer_cli,
+    extract_cli,
+    extract_labelme_from_folder_cli,
+    extract_to_yolo_cli,
+    show_images_with_bboxes_cli,
 )
 
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="SynDataGenYOLO",
-        description="Command line interface for synthetic data generation."
+        prog="syndatagenyolo",
+        description="Command line interface for synthetic data generation.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -25,8 +29,7 @@ def main():
 
     # Add subcommands without defining arguments here
     for cmd, func in subcommands.items():
-        subparsers.add_parser(
-            cmd, help=f"{cmd} command").set_defaults(func=func)
+        subparsers.add_parser(cmd, help=f"{cmd} command").set_defaults(func=func)
 
     args, remaining_args = parser.parse_known_args()
     print(f"Command: {args.command}, Remaining args: {remaining_args}")

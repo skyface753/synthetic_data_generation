@@ -3,21 +3,34 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "SynDataGenYOLO"
-version = "0.1.9"
+name = "syndatagenyolo"
+version = "0.1.10"
 description = "A package for generating synthetic data, using labelme and generating synthetic images."
 readme = "README.md"
 authors = [{ name = "Sebastian Jörz", email = "seppel8426@gmail.com" }]
 license = { file = "LICENSE" }
-dynamic = ["dependencies"]
+dependencies = [
+    "albumentations>=2.0.8",
+    "joblib>=1.5.1",
+    "kaggle>=1.7.4.5",
+    "labelme>=5.8.3",
+    "scikit-image>=0.25.2",
+    "shapely>=2.1.1",
+    "torch>=2.8.0",
+    "torchvision>=0.23.0",
+    "ultralytics>=8.3.175",
+]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+
+[tool.uv.workspace]
+members = [
+    "demo",
+]
 
 [tool.setuptools]
-packages = ["SynDataGenYOLO"]
+packages = ["syndatagenyolo"]
 
 [project.scripts]
-SynDataGenYOLO = "SynDataGenYOLO.cli.main:main"
-syn_data_gen-extract = "SynDataGenYOLO.cli.extract_cli:main"
+syndatagenyolo = "syndatagenyolo.cli.main:main"
+syn_data_gen-extract = "syndatagenyolo.cli.extract_cli:main"
 

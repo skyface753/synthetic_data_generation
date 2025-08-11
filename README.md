@@ -7,7 +7,7 @@ A bunch of scripts to generate synthetic images for YOLO.
 1. Install the required packages:
 
 ```bash
-pip install SynDataGenYOLO
+pip install syndatagenyolo
 ```
 
 ## Tools
@@ -17,7 +17,7 @@ pip install SynDataGenYOLO
 With this scripts, you can extract objects, which are annotated with labelme, from images.
 
 ```bash
-SynDataGenYOLO extract --input_dir INPUT_DIR --output_dir OUTPUT_DIR --margin MARGIN
+syndatagenyolo extract --input_dir INPUT_DIR --output_dir OUTPUT_DIR --margin MARGIN
 ```
 
 - `INPUT_DIR`: The directory where the images are stored.
@@ -31,7 +31,7 @@ With this script, you can generate synthetic images with the extracted objects a
 Minimal example:
 
 ```bash
-SynDataGenYOLO generate --input_dir INPUT_DIR --output_dir OUTPUT_DIR --image_number IMAGE_NUMBER
+syndatagenyolo generate --input_dir INPUT_DIR --output_dir OUTPUT_DIR --image_number IMAGE_NUMBER
 ```
 
 - `INPUT_DIR`: The directory where the extracted objects are stored.
@@ -67,7 +67,7 @@ INPUT_DIR
 Maximal example:
 
 ```bash
-SynDataGenYOLO generate --input_dir INPUT_DIR --output_dir OUTPUT_DIR --image_number IMAGE_NUMBER --augmentation_path AUGMENTATION_PATH --max_objects_per_image MAX_OBJECTS_PER_IMAGE --image_width IMAGE_WIDTH --image_height IMAGE_HEIGHT --fixed_image_sizes --scale_foreground_by_background_size --scaling_factors SCALING_FACTORS SCALING_FACTORS --avoid_collisions --parallelize --yolo_input --yolo --color_harmon_alpha COLOR_HARMON_ALPHA --color_harmon_random --gaussian_options GAUSSIAN_OPTIONS GAUSSIAN_OPTIONS --debug --blending_methods BLENDING_METHODS BLENDING_METHODS --pyramid_blending_levels PYRAMID_BLENDING_LEVELS --distractor_objects DISTRACTOR_OBJECTS DISTRACTOR_OBJECTS
+syndatagenyolo generate --input_dir INPUT_DIR --output_dir OUTPUT_DIR --image_number IMAGE_NUMBER --augmentation_path AUGMENTATION_PATH --max_objects_per_image MAX_OBJECTS_PER_IMAGE --image_width IMAGE_WIDTH --image_height IMAGE_HEIGHT --fixed_image_sizes --scale_foreground_by_background_size --scaling_factors SCALING_FACTORS SCALING_FACTORS --avoid_collisions --parallelize --yolo_input --yolo --color_harmon_alpha COLOR_HARMON_ALPHA --color_harmon_random --gaussian_options GAUSSIAN_OPTIONS GAUSSIAN_OPTIONS --debug --blending_methods BLENDING_METHODS BLENDING_METHODS --pyramid_blending_levels PYRAMID_BLENDING_LEVELS --distractor_objects DISTRACTOR_OBJECTS DISTRACTOR_OBJECTS
 ```
 
 - `AUGMENTATION_PATH`: Path to a albumentations augmentation file.
@@ -104,7 +104,7 @@ The blending methods can be combined with a space.
 ### Mix Datasets
 
 ```bash
-SynDataGenYOLO mix --input_dirs INPUT_DIRS --output_dir OUTPUT_DIR --output_splits OUTPUT_SPLITS --percent_sets PERCENT_SETS --test_dataset TEST_DATASET --fixed_data_path FIXED_DATA_PATH --class_names CLASS_NAMES
+syndatagenyolo mix --input_dirs INPUT_DIRS --output_dir OUTPUT_DIR --output_splits OUTPUT_SPLITS --percent_sets PERCENT_SETS --test_dataset TEST_DATASET --fixed_data_path FIXED_DATA_PATH --class_names CLASS_NAMES
 ```
 
 - `INPUT_DIRS`: The directories where the datasets are stored.
@@ -114,6 +114,10 @@ SynDataGenYOLO mix --input_dirs INPUT_DIRS --output_dir OUTPUT_DIR --output_spli
 - `TEST_DATASET`: The dataset which should be used as test dataset.
 - `FIXED_DATA_PATH`: Use a absolute path in the `data.yaml` file.
 - `CLASS_NAMES`: The class names for the mixed dataset. (eg. `class_1 class_2 class_3`)
+
+## Demo
+
+[Streamlit Demo](https://skyface753-synthetic-data-generation-demodemo-d4fgsc.streamlit.app/)
 
 ## Contribute
 
@@ -144,13 +148,13 @@ pip install -e .
 3. Build the package:
 
 ```bash
-pip install --upgrade build
-python -m build
+uv pip install --upgrade build
+uv run -m build
 ```
 
 4. Publish the package:
 
 ```bash
-pip install --upgrade twine
-python -m twine upload dist/*
+uv pip install --upgrade twine
+uv run -m twine upload dist/*
 ```

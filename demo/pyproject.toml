@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "opencv-python-headless>=4.11.0.86",
     "pillow>=11.3.0",
-    "syndatagenyolo",
+    "syndatagenyolo==0.1.10",
 ]
 
 [dependency-groups]
