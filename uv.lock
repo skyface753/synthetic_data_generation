@@ -2531,7 +2531,7 @@ wheels = [
 
 [[package]]
 name = "syndatagenyolo"
-version = "0.1.10"
+version = "0.1.14"
 source = { editable = "." }
 dependencies = [
     { name = "albumentations" },

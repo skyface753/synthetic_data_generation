@@ -1,4 +1,4 @@
-import importlib.resources as pkg_resources
+from importlib import resources as impresources
 import json
 import logging
 import random
@@ -17,10 +17,11 @@ from shapely.geometry import Polygon
 from skimage import measure
 from tqdm import tqdm
 
-import syndatagenyolo.data
-from syndatagenyolo.utils.blending import poisson_blend_rgba, pyramid_blend
-from syndatagenyolo.utils.data_gen import validate_input_directory
-from syndatagenyolo.utils.modes import BlendingMode, OutputMode
+from . import templates
+from .utils.blending import poisson_blend_rgba, pyramid_blend
+from .utils.data_gen import validate_input_directory
+from .utils.modes import BlendingMode #, OutputMode
+from .utils.classes_yaml import load_class_map
 
 logger = logging.getLogger(__name__)
 
@@ -71,12 +72,13 @@ class SyntheticImageGenerator:
         avoid_collisions: bool = True,
         parallelize: bool = True,
         yolo_input: bool = False,
-        output_mode: OutputMode = OutputMode.YOLO,
+        # output_mode: OutputMode = OutputMode.YOLO,
         scaling_config: ScalingConfig = ScalingConfig(),
         blending_config: BlendingConfig = BlendingConfig(),
         color_harmonization_config: ColorHarmonizationConfig = ColorHarmonizationConfig(),
         distractor_objects: List[str] = [],
         overwrite_output: bool = False,
+        class_map_path: str = "classes.yaml",
         debug: bool = False,
     ):
         self.input_dir = Path(input_dir)
@@ -95,8 +97,8 @@ class SyntheticImageGenerator:
         self.avoid_collisions = avoid_collisions
         self.parallelize = parallelize
         self.yolo_input = yolo_input
-        self.output_mode = output_mode
-        self.categories = []
+        # self.output_mode = output_mode
+        # self.categories = []
         self.color_harmonization = color_harmonization_config.enabled
         self.color_harmonization_alpha = color_harmonization_config.alpha
         self.color_harmonization_random = color_harmonization_config.random_alpha
@@ -108,31 +110,24 @@ class SyntheticImageGenerator:
             blending_config.gaussian_sigma,
         )
 
+        self.class_map_path = class_map_path
         self.debug = debug
-
         self.distractor_objects = distractor_objects
         self.overwrite_output = overwrite_output
 
-        if self.output_mode == OutputMode.CLASSIFICATION_SINGLE and self.yolo_input:
-            raise ValueError(
-                "Output mode CLASSIFICATION_SINGLE is not supported with YOLO input"
-            )
-        if (
-            self.output_mode == OutputMode.CLASSIFICATION_SINGLE
-            and self.max_objects_per_image > 1
-        ):
-            raise ValueError(
-                "Output mode CLASSIFICATION_SINGLE is not supported with multiple objects per image"
-            )
 
         (
             self.foregrounds_dict,
-            self.categories,
+            _,
             self.background_images,
             self.labels_dict,
         ) = validate_input_directory(
             self.input_dir, self.yolo_input, self.distractor_objects
         )
+        
+        
+        self.class_to_idx = load_class_map(self.class_map_path)
+        
         # self._validate_output_directory()
         self._make_output_dir()
         self._validate_augmentation_path()
@@ -160,10 +155,9 @@ class SyntheticImageGenerator:
             return
         if self.augmentation_path is None or self.augmentation_path == "":
             # Load default from package
-            with pkg_resources.path(
-                syndatagenyolo.data, "default_augmentation.yml"
-            ) as default_augmentation_path:
-                self.augmentation_path = default_augmentation_path
+            default_augmentation_path = impresources.files(templates) / "default_augmentation.yml"
+        
+            self.augmentation_path = default_augmentation_path
             print(f"using default augmentation path: {self.augmentation_path}")
         self.augmentation_path = Path(self.augmentation_path)
         if self.augmentation_path.is_file() and self.augmentation_path.suffix == ".yml":
@@ -214,79 +208,73 @@ class SyntheticImageGenerator:
 
         for blending_mode_image in blending_mode_images:
             save_filename = f"{image_number:0{self.zero_padding}}_{blending_mode_image['blending_mode']}"
-            if self.output_mode == OutputMode.CLASSIFICATION_SINGLE:
-                # get the class of the first foreground
-                class_name = foregrounds[0]["category"]
-                save_filename = f"{class_name}/{save_filename}"
-
-                output_path = self.output_dir / f"{save_filename}.jpg"
-                print(f"writing {output_path}")
-            elif self.output_mode == OutputMode.COCO:
-                output_path = self.output_dir / f"{save_filename}.jpg"
-            elif self.output_mode == OutputMode.YOLO:
-                output_path = self.output_dir / f"images/{save_filename}.jpg"
+        
+            output_path = self.output_dir / f"images/{save_filename}.jpg"
 
             blending_mode_image["image"] = blending_mode_image["image"].convert("RGB")
             blending_mode_image["image"].save(output_path, optimize=True, quality=70)
 
             annotations["imagePath"] = f"{save_filename}.jpg"
-            if self.output_mode == OutputMode.COCO:
-                annotations_output_path = self.output_dir / f"{save_filename}.json"
-                with open(annotations_output_path, "w+") as output_file:
-                    json.dump(annotations, output_file)
-            elif self.output_mode == OutputMode.YOLO:
-                if self.yolo_input:
-                    # get the corresponding label file
-                    # check if the label file exists
-                    if background_image_path.stem in self.labels_dict:
-                        old_label_lines = []
-                        old_label_file = self.labels_dict[background_image_path.stem]
-                        # read the label file
-                        with open(old_label_file, "r") as f:
-                            old_label_lines = f.readlines()
-                    else:
-                        old_label_lines = None  # no old label file
-                        logger.debug(
-                            f"Label file for {background_image_path.stem} not found, skipping..."
-                        )
-                # create the new annotations
-                new_label_lines = []
-                for shape in annotations["shapes"]:
-                    x_center, y_center, width, height = self._shape_to_yolo(
-                        shape, annotations["imageWidth"], annotations["imageHeight"]
+            if self.yolo_input:
+                # get the corresponding label file
+                # check if the label file exists
+                if background_image_path.stem in self.labels_dict:
+                    old_label_lines = []
+                    old_label_file = self.labels_dict[background_image_path.stem]
+                    # read the label file
+                    with open(old_label_file, "r") as f:
+                        old_label_lines = f.readlines()
+                else:
+                    old_label_lines = None  # no old label file
+                    logger.debug(
+                        f"Label file for {background_image_path.stem} not found, skipping..."
                     )
-                    # get the id of the category
-                    category_id = None
-                    for category in self.categories:
-                        if category["name"] == shape["label"]:
-                            category_id = category
-                            break
-                    if category_id is None:
-                        warnings.warn(
-                            f"category {shape['label']} not found in categories"
-                        )
-                        continue
-                    new_label_lines.append(
-                        f"{category_id['id']} {x_center} {y_center} {width} {height}\n"
+            # create the new annotations
+            new_label_lines = []
+            for shape in annotations["shapes"]:
+                x_center, y_center, width, height = self._shape_to_yolo(
+                    shape, annotations["imageWidth"], annotations["imageHeight"]
+                )
+                # get the id of the category
+                class_idx = self.class_to_idx.get(shape["label"])
+                if class_idx is None:
+                    warnings.warn(
+                        f"Label '{shape['label']}' not found in class map. Skipping this annotation."
                     )
+                    continue
+                # category_id = None
+                # for category in self.categories:
+                #     if category["name"] == shape["label"]:
+                #         category_id = category
+                #         break
+                # if category_id is None:
+                #     warnings.warn(
+                #         f"category {shape['label']} not found in categories"
+                #     )
+                #     continue
+                new_label_lines.append(
+                    f"{class_idx} {x_center} {y_center} {width} {height}\n"
+                )
 
-                # Save label file
-                label_output_path = self.output_dir / f"labels/{save_filename}.txt"
-                with open(label_output_path, "w+") as output_file:
-                    if self.yolo_input and old_label_lines:
-                        for line in old_label_lines:
-                            output_file.write(line)
-                        # newline
-                        output_file.write("\n")
-                    for line in new_label_lines:
+            # Save label file
+            label_output_path = self.output_dir / f"labels/{save_filename}.txt"
+            with open(label_output_path, "w+") as output_file:
+                if self.yolo_input and old_label_lines:
+                    for line in old_label_lines:
                         output_file.write(line)
-                # write a classes file
-                classes_output_path = self.output_dir / "classes.txt"
-                # order the categories by id
-                self.categories.sort(key=lambda x: x["id"])
-                with open(classes_output_path, "w+") as output_file:
-                    for category in self.categories:
-                        output_file.write(f"{category['name']}\n")
+                    # newline
+                    output_file.write("\n")
+                for line in new_label_lines:
+                    output_file.write(line)
+            # write a classes file
+            classes_output_path = self.output_dir / "classes.txt"
+            # order the categories by id
+            # self.categories.sort(key=lambda x: x["id"])
+            with open(classes_output_path, "w+") as output_file:
+                for category in self.class_to_idx.keys():
+                    output_file.write(f"{category}\n")
+                # for category in self.categories:
+                #     output_file.write(f"{category['name']}\n")
             # print(f'Generated image: {output_path}')
             logger.debug(f"Generated image: {output_path}")
         return
@@ -800,17 +788,8 @@ class SyntheticImageGenerator:
             shutil.rmtree(self.output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-        if self.output_mode == OutputMode.CLASSIFICATION_SINGLE:
-            # Create directories for images and labels
-            self.output_dir.mkdir(exist_ok=True)
-            # Create directories for classes
-            for category in self.categories:
-                (self.output_dir / category["name"]).mkdir(exist_ok=True)
-        elif self.output_mode == OutputMode.YOLO:
-            (self.output_dir / "images").mkdir(exist_ok=True)
-            (self.output_dir / "labels").mkdir(exist_ok=True)
-        elif self.output_mode == OutputMode.COCO:
-            self.output_dir.mkdir(exist_ok=True)
+        (self.output_dir / "images").mkdir(exist_ok=True)
+        (self.output_dir / "labels").mkdir(exist_ok=True)
 
     def generate_images(self):
         # Create directories for images and labels

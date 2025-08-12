@@ -27,16 +27,16 @@ def validate_input_directory(input_dir: Path, yolo_input: bool,
     if yolo_input:
         assert labels_dir is not None, 'labels sub-directory was not found in the input_dir'
 
-    foregrounds_dict, categories = _validate_and_process_foregrounds(foregrounds_dir, yolo_input=yolo_input,
+    foregrounds_dict, _ = _validate_and_process_foregrounds(foregrounds_dir, yolo_input=yolo_input,
                                                                      distractor_objects=distractor_objects)
     background_images = _validate_and_process_backgrounds(backgrounds_dir)
     if yolo_input:
-        labels_dict, categories = _validate_and_process_labels(
-            labels_dir, categories)
+        labels_dict, _ = _validate_and_process_labels(
+            labels_dir, _)
     else:
         labels_dict = dict()
 
-    return foregrounds_dict, categories, background_images, labels_dict
+    return foregrounds_dict, _, background_images, labels_dict
 
 
 def _validate_and_process_foregrounds(foregrounds_dir: Path, yolo_input: bool = False,

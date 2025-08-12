@@ -18,7 +18,7 @@ def main(args=None):
         help="output directory to save the /images and /labels",
     )
     parser.add_argument(
-        "--labels", type=str, nargs="+", required=True, help="list of labels to extract"
+        "--labels", type=str, default=None, help="Optional path to a YAML file with class names."
     )
 
     if args is None:
@@ -26,6 +26,4 @@ def main(args=None):
     else:
         args = parser.parse_args(args)  # Parse args when called from main CLI
 
-    extract_to_yolo(args.input_dir, args.output_dir, args.labels)
-    extract_to_yolo(args.input_dir, args.output_dir, args.labels)
     extract_to_yolo(args.input_dir, args.output_dir, args.labels)

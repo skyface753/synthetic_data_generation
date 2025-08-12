@@ -11,7 +11,7 @@ test-copy-backgrounds:
 	cp -r test_data/backgrounds/* tmp/backgrounds/
 
 test-data-generation:
-	uv run syndatagenyolo/cli/data_generation_cli.py -in_dir tmp -out_dir tmp/out -img_number 5 --distractor_objects Mud --output_mode YOLO --overwrite_output
+	uv run syndatagenyolo/cli/data_generation_cli.py -in_dir tmp -out_dir tmp/out -img_number 5 --distractor_objects Mud --overwrite_output
 
 show-tmp-with-bboxes:
 	uv run syndatagenyolo/cli/show_images_with_bboxes_cli.py --input tmp/out

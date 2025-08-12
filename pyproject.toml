@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syndatagenyolo"
-version = "0.1.10"
+version = "0.1.14"
 description = "A package for generating synthetic data, using labelme and generating synthetic images."
 readme = "README.md"
 authors = [{ name = "Sebastian Jörz", email = "seppel8426@gmail.com" }]
@@ -27,8 +27,12 @@ members = [
     "demo",
 ]
 
+
 [tool.setuptools]
 packages = ["syndatagenyolo"]
+
+[tool.setuptools.package-data]
+"syndatagenyolo" = ["templates/*.yml", "templates/*.yaml"] # <-- Add this line
 
 [project.scripts]
 syndatagenyolo = "syndatagenyolo.cli.main:main"

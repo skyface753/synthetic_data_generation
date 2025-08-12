@@ -48,10 +48,10 @@ def main(args=None):
         help="fixed data path to be used in the data.yaml file",
     )
     parser.add_argument(
-        "--class_names",
+        "--class_map_path",
         type=str,
-        nargs="+",
-        help="class names to be used in the data.yaml file",
+        default="classes.yaml",
+        help="path to a YAML file with class names",
     )
 
     if args is None:
@@ -66,5 +66,5 @@ def main(args=None):
         args.output_splits,
         args.output_dir,
         args.fixed_data_path,
-        args.class_names,
+        args.class_map_path,
     )

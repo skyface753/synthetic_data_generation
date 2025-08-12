@@ -6,7 +6,7 @@ from syndatagenyolo.data_generation import (
     BlendingConfig,
     BlendingMode,
     ColorHarmonizationConfig,
-    OutputMode,
+    # OutputMode,
     ScalingConfig,
     SyntheticImageGenerator,
 )
@@ -87,13 +87,13 @@ def main(args=None):
         help="Has your background images been annotated in YOLO format?",
     )
     # output mode: either YOLO or COCO or CLASSIFICATION_SINGLE
-    parser.add_argument(
-        "-o",
-        "--output_mode",
-        type=str,
-        default="YOLO",
-        help="Output mode: either YOLO or COCO or CLASSIFICATION_SINGLE (default=YOLO)",
-    )
+    # parser.add_argument(
+    #     "-o",
+    #     "--output_mode",
+    #     type=str,
+    #     default="YOLO",
+    #     help="Output mode: either YOLO or COCO or CLASSIFICATION_SINGLE (default=YOLO)",
+    # )
 
     # Scaling config
     parser.add_argument(
@@ -177,6 +177,12 @@ def main(args=None):
         help="Overwrite the output directory if it exists (default=false)",
     )
     parser.add_argument(
+        "--class_map_path",
+        type=str,
+        default="classes.yaml",
+        help="Path to the YAML file containing the class names. If not provided, a default 'classes.yaml' will be used.",
+    )
+    parser.add_argument(
         "--debug",
         default=False,
         action="store_true",
@@ -228,16 +234,16 @@ def main(args=None):
     )
 
     # get the output mode
-    output_mode = None
-    if args.output_mode == OutputMode.YOLO.value:
-        output_mode = OutputMode.YOLO
-    elif args.output_mode == OutputMode.CLASSIFICATION_SINGLE.value:
-        output_mode = OutputMode.CLASSIFICATION_SINGLE
-    elif args.output_mode == OutputMode.COCO.value:
-        output_mode = OutputMode.COCO
-    else:
-        print(f"Output mode {args.output_mode} not found")
-        sys.exit(1)
+    # output_mode = None
+    # if args.output_mode == OutputMode.YOLO.value:
+    #     output_mode = OutputMode.YOLO
+    # elif args.output_mode == OutputMode.CLASSIFICATION_SINGLE.value:
+    #     output_mode = OutputMode.CLASSIFICATION_SINGLE
+    # elif args.output_mode == OutputMode.COCO.value:
+    #     output_mode = OutputMode.COCO
+    # else:
+    #     print(f"Output mode {args.output_mode} not found")
+    #     sys.exit(1)
 
     if args.fixed_image_sizes and args.yolo_input:
         warnings.warn(
@@ -274,12 +280,13 @@ def main(args=None):
         avoid_collisions=args.avoid_collisions,
         parallelize=args.parallelize,
         yolo_input=args.yolo_input,
-        output_mode=output_mode,
+        # output_mode=output_mode,
         scaling_config=scaling_config,
         blending_config=blending_config,
         color_harmonization_config=color_harmonization_config,
         distractor_objects=args.distractor_objects,
         overwrite_output=args.overwrite_output,
+        class_map_path=args.class_map_path,
         debug=args.debug,
     )
     data_generator.generate_images()

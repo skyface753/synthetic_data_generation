@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import subprocess
 import numpy as np
-
+from syndatagenyolo.utils.classes_yaml import load_class_map
 
 def write_dataset(df, output_dir_images, output_dir_labels):
     try:
@@ -86,7 +86,7 @@ def validate_percentages(original_datasets, merged_dataset, expected_percentages
     print("\nAll checks passed successfully!")
 
 
-def mix_datasets(input_dirs, test_dataset, percent_sets, output_splits, output_dir, fixed_data_path, class_names):
+def mix_datasets(input_dirs, test_dataset, percent_sets, output_splits, output_dir, fixed_data_path, class_map_path="classes.yaml"):
 
     if fixed_data_path == '':
         fixed_data_path = None
@@ -104,6 +104,9 @@ def mix_datasets(input_dirs, test_dataset, percent_sets, output_splits, output_d
     # delete output directory if it exists
     if os.path.exists(output_dir):
         os.system(f'rm -r {output_dir}')
+        
+    class_to_idx = load_class_map(class_map_path)
+    
 
     # ceck for more than one input directory
     if len(input_dirs) >= 1:
@@ -223,8 +226,9 @@ def mix_datasets(input_dirs, test_dataset, percent_sets, output_splits, output_d
         # sort
         classes.sort()
         print('Classes:', classes)
+        
 
-        if len(classes) != len(class_names):
+        if len(classes) != len(class_to_idx):
             print(
                 'Error: the number of classes and class names must be the same')
             exit()
@@ -245,8 +249,10 @@ def mix_datasets(input_dirs, test_dataset, percent_sets, output_splits, output_d
             f.write('test: ' + os.path.join(absolute_path, 'test') + '\n')
             f.write('nc: ' + str(len(set(classes))) + '\n')
             f.write('names: ' + '\n')
-            for class_name in class_names:
-                f.write('  - ' + class_name + '\n')
+            for class_name, idx in class_to_idx.items():
+                f.write(f'  - {class_name}\n')
+            # for class_name in class_names:
+            #     f.write('  - ' + class_name + '\n')
         # write the number of images per split to a file (for debugging)
         with open(os.path.join(output_dir, 'num_images.txt'), 'w') as f:
             f.write('Train: ' + str(len(train_dataset)) + '\n')
