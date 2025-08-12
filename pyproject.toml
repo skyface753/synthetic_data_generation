@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.8.9,<0.9.0"]
+build-backend = "uv_build"
 
 [project]
 name = "syndatagenyolo"
-version = "0.1.14"
+version = "0.2.0"
 description = "A package for generating synthetic data, using labelme and generating synthetic images."
 readme = "README.md"
 authors = [{ name = "Sebastian Jörz", email = "seppel8426@gmail.com" }]
-license = { file = "LICENSE" }
+license-files = ["LICENSE"]
 dependencies = [
     "albumentations>=2.0.8",
     "joblib>=1.5.1",
@@ -27,12 +27,11 @@ members = [
     "demo",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
 
-[tool.setuptools]
-packages = ["syndatagenyolo"]
-
-[tool.setuptools.package-data]
-"syndatagenyolo" = ["templates/*.yml", "templates/*.yaml"] # <-- Add this line
 
 [project.scripts]
 syndatagenyolo = "syndatagenyolo.cli.main:main"

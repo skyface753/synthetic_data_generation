@@ -17,11 +17,11 @@ from shapely.geometry import Polygon
 from skimage import measure
 from tqdm import tqdm
 
-from . import templates
-from .utils.blending import poisson_blend_rgba, pyramid_blend
-from .utils.data_gen import validate_input_directory
-from .utils.modes import BlendingMode #, OutputMode
-from .utils.classes_yaml import load_class_map
+from syndatagenyolo import templates
+from syndatagenyolo.utils.blending import poisson_blend_rgba, pyramid_blend
+from syndatagenyolo.utils.data_gen import validate_input_directory
+from syndatagenyolo.utils.modes import BlendingMode #, OutputMode
+from syndatagenyolo.utils.classes_yaml import load_class_map
 
 logger = logging.getLogger(__name__)
 
